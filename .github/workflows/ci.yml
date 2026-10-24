@@ -1,0 +1,67 @@
+name: Verify Rajvya
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: rajvya_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:test-only-password@localhost:5432/rajvya_test
+      DATABASE_SSL: disable
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: test-only-password
+      PGDATABASE: rajvya_test
+      NEXT_PUBLIC_SUPABASE_URL: https://fixture.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: fixture-public-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: Prepare disposable database
+        run: |
+          psql -v ON_ERROR_STOP=1 -f scripts/ci-bootstrap.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610240001_initial.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610240003_internal_fixtures.sql
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO profiles(id,name,role) SELECT id,'Test customer','customer' FROM auth.users; INSERT INTO metal_rates(purity,rate_paise) VALUES('22K',915000),('18K',750000),('925',10000);"
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Validate evaluation manifest
+        run: node scripts/validate-evals.mjs
+  browser:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          E2E_BASE_URL: ${{ vars.DEMO_URL }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-report
+          path: playwright-report/

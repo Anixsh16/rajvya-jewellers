@@ -1,0 +1,5 @@
+export function parseCSV(text:string):Record<string,string>[] {
+ const rows:string[][]=[];let row:string[]=[],field='',quoted=false;
+ for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){field+='"';i++;}else quoted=!quoted;}else if(c===','&&!quoted){row.push(field);field='';}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(x=>x.trim()))rows.push(row);row=[];field='';}else field+=c;}
+ if(quoted)throw new Error('Unclosed quoted CSV field');row.push(field);if(row.some(x=>x.trim()))rows.push(row);if(rows.length<2)throw new Error('CSV must include a header and at least one product');const headers=rows.shift()!.map(x=>x.trim().replace(/^\uFEFF/,''));if(new Set(headers).size!==headers.length)throw new Error('Duplicate CSV headers');return rows.map(r=>{if(r.length!==headers.length)throw new Error('CSV row has an unexpected number of fields');return Object.fromEntries(headers.map((h,i)=>[h,r[i].trim()]));});
+}
