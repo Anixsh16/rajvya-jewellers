@@ -1,5 +1,7 @@
 node_modules/
 .next/
+.next-dev/
+.next-local/
 out/
 .env*
 !.env.example
@@ -11,3 +13,5 @@ coverage/
 .local/
 
 *.tsbuildinfo
+__pycache__/
+*.pyc

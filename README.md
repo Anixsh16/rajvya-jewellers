@@ -6,14 +6,19 @@ This is an independent demonstration. Products, policies, tax settings, photogra
 
 ## Run locally
 
-Use Node.js 22 and Python 3.11+ with `psycopg[binary]` for provisioning. Copy `.env.example` to `.env.local` and fill in a dedicated Supabase project's credentials, Gemini key and Razorpay **test** keys. Never commit local credentials.
+Use Node.js 22, Python 3.11+, and running Docker Desktop. The local helper creates configuration and disposable accounts automatically; cloud credentials are not needed for offline checks.
 
 ```sh
 npm ci --legacy-peer-deps
-npm run dev
+python -m pip install -r requirements-dev.txt
+npx supabase start
+python scripts/setup-local.py
+python scripts/local-app.py
 ```
 
-The application runs at `http://localhost:3000`. Customer demo sign-in creates a separate identity per session. Owner and staff accounts are provisioned separately; their passwords must never be exposed through the public demo.
+The isolated application runs at `http://localhost:3001`. Local account details are in ignored `.local/local-demo-accounts.json`. AI and payment provider calls deliberately stop in this offline environment. Customer demo sign-in creates a separate identity per session; owner credentials stay private. For the existing cloud configuration, `npm run dev` serves port 3000.
+
+See [complete setup and deployment instructions](docs/SETUP.md), [architecture and stack reasons](docs/ARCHITECTURE.md), [reviewer demo](docs/DEMO.md), [measured results and outstanding gates](docs/RESULTS.md), and the [approved illustrated build plan](docs/BUILD_PLAN.md).
 
 Provisioning helpers use `~/.config/rajvya/credentials.json` on the development machine. `scripts/migrate.py` also accepts `DATABASE_URL` from the environment. `scripts/seed.py` provisions demo accounts, 50 products, generated photography, policies and today's demo rates. Its required provisioning fields are documented in `.env.example` and the script. The seed never resets sold inventory. Review every migration before using any existing non-demo database.
 
@@ -21,15 +26,15 @@ Provisioning helpers use `~/.config/rajvya/credentials.json` on the development 
 
 ```sh
 npm run typecheck
-npm test
+python scripts/run-local.py test
 npm run build
 npx playwright install chromium
-npm run test:e2e
+python scripts/run-local.py browser
 node scripts/validate-evals.mjs
-npm run eval -- --limit 30
+python scripts/run-local.py mcp
 ```
 
-Database integration tests create and remove their own internal product/order fixtures. Run browser and database suites sequentially. Live AI evaluations are quota-limited; incomplete runs are not counted as successes. See `evals/README.md`.
+Database integration tests create and remove their own internal product/order fixtures. Run browser and database suites sequentially. Live AI evaluations require an explicit real key and are quota-limited; incomplete runs are not successes. See [the evaluation contract](evals/README.md).
 
 ## Architecture and invariants
 
@@ -60,7 +65,7 @@ CSV headers are demonstrated in `public/sample-catalogue.csv`. Imports stage dra
 
 Vercel runtime secrets are configured separately from GitHub and Supabase setup tokens. `scripts/provision-deploy.py` uploads tracked application source and starts a production deployment using credentials from the local private configuration. Vercel Hobby is for a personal non-commercial demo; commercial rollout requires a separate hosting review.
 
-Register the final HTTPS `/api/webhooks/razorpay` URL in the Razorpay test dashboard and use exactly the configured `RAZORPAY_WEBHOOK_SECRET`. Subscribe to `payment.captured`, `payment.failed` and `refund.processed`. Test the closed-browser and repeated-webhook cases before relying on asynchronous updates. `/api/health` checks database connectivity without revealing configuration.
+Register the final HTTPS `/api/webhooks/razorpay` URL in the Razorpay test dashboard and use exactly the configured `RAZORPAY_WEBHOOK_SECRET`. Subscribe to `payment.captured`, `payment.failed` and `refund.processed`. This dashboard step still requires a human login. Scheduled provider reconciliation is independent of webhooks and uses short-lived signed invocations. `/api/health` checks database connectivity without revealing configuration. The real test refund currently remains uncertain following Razorpay's HTTP 400 response; it has not been reported as successful.
 
 Watch the owner exception queue, pending/uncertain refunds, failed embedding states, cron run history, server errors and AI usage. `ai_usage` tracks model tokens and latency; `audit_log` records owner decisions. Global daily AI and per-user request limits degrade to normal shopping when exhausted.
 

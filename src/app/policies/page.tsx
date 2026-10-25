@@ -1,3 +1,20 @@
-import {db,plain} from '@/lib/db';
-export const dynamic='force-dynamic';
-export default async function Page(){const policies=plain(await db()`select title,content from policies order by title`);return <div className="page-wrap policy-page"><p className="eyebrow">CLEAR FROM THE START</p><h1 className="page-title">A little clarity.</h1><p className="muted">These are illustrative policies for a portfolio demonstration.</p><div className="stack" style={{marginTop:35}}>{policies.map(p=><section className="panel" id={p.title.toLowerCase().split(' ')[0]} key={p.title}><h2>{p.title}</h2><p>{p.content}</p></section>)}</div></div>;}
+import { db, plain } from '@/lib/db';
+export const dynamic = 'force-dynamic';
+export default async function Page() {
+  const policies = plain(await db()`select title,content from policies order by title`);
+  return (
+    <div className="page-wrap policy-page">
+      <p className="eyebrow">CLEAR FROM THE START</p>
+      <h1 className="page-title">A little clarity.</h1>
+      <p className="muted">These are illustrative policies for a portfolio demonstration.</p>
+      <div className="stack" style={{ marginTop: 35 }}>
+        {policies.map((p) => (
+          <section className="panel" id={p.title.toLowerCase().split(' ')[0]} key={p.title}>
+            <h2>{p.title}</h2>
+            <p>{p.content}</p>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}

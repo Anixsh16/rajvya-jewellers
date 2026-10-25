@@ -1,0 +1,13 @@
+node_modules
+next-env.d.ts
+.next
+.next-dev
+.next-local
+.local
+playwright-report
+test-results
+package-lock.json
+src/lib/database.types.ts
+docs/mockups
+public/images
+supabase/migrations

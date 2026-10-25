@@ -1,0 +1,2 @@
+-- Auth and Storage must be running before application fixtures can be seeded.
+-- After supabase start/reset, run: python scripts/setup-local.py

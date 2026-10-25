@@ -4,6 +4,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      live_evaluation:
+        description: Run quota-limited real Gemini evaluation
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -28,9 +33,14 @@ jobs:
       PGDATABASE: rajvya_test
       NEXT_PUBLIC_SUPABASE_URL: https://fixture.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: fixture-public-key
+      GEMINI_API_KEY: offline-replay-fixture
+      GEMINI_MODEL: gemini-3.5-flash-lite
+      EMBEDDING_MODEL: gemini-embedding-2
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -40,28 +50,98 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f scripts/ci-bootstrap.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610240001_initial.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610240003_internal_fixtures.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610240004_review_and_expiry.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610240005_conversation_actions.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610250006_evaluation_isolation.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610250007_reconciliation_and_embeddings.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610250008_keyword_relevance.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610250009_policy_detail.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610250010_human_evaluation_labels.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610250011_price_function_search_path.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610250012_expiry_lock_order.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202610250013_captured_amount.sql
           psql -v ON_ERROR_STOP=1 -c "INSERT INTO profiles(id,name,role) SELECT id,'Test customer','customer' FROM auth.users; INSERT INTO metal_rates(purity,rate_paise) VALUES('22K',915000),('18K',750000),('925',10000);"
       - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
       - run: npm test
       - run: npm run build
       - name: Validate evaluation manifest
         run: node scripts/validate-evals.mjs
   browser:
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci --legacy-peer-deps
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'psycopg[binary]>=3.2,<4'
+      - name: Start disposable Supabase
+        run: |
+          mkdir -p .local
+          npx supabase start > .local/supabase-start.log 2>&1
+          python scripts/setup-local.py --github-env
+      - name: Start local application
+        run: python scripts/local-app.py > .local/next.log 2>&1 &
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
-        env:
-          E2E_BASE_URL: ${{ vars.DEMO_URL }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: browser-report
           path: playwright-report/
+  live-evaluation:
+    if: github.event_name == 'workflow_dispatch' && inputs.live_evaluation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --legacy-peer-deps
+      - run: pip install 'psycopg[binary]>=3.2,<4'
+      - run: |
+          mkdir -p .local
+          npx supabase start > .local/supabase-start.log 2>&1
+          python scripts/setup-local.py --github-env
+      - name: Live release subset
+        run: npm run eval -- --limit 30
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: live-evaluation
+          path: .local/eval-*.json
+          include-hidden-files: true
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verify, browser]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: python scripts/provision-deploy.py deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+      - run: python scripts/provision-deploy.py wait
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}

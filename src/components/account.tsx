@@ -1,10 +1,264 @@
 'use client';
-import {useEffect,useState} from 'react';
+import { JewelleryImage } from '@/components/jewellery-image';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {useRouter} from 'next/navigation';
-import {ArrowRight,LoaderCircle,RefreshCw,LogOut,Package,MapPin} from 'lucide-react';
-import {api} from '@/lib/client';
-import {money} from '@/lib/types';
-export function Account(){const [user,setUser]=useState<any>();const [orders,setOrders]=useState<any[]>([]);const [busy,setBusy]=useState(true);const [error,setError]=useState('');const [refund,setRefund]=useState<string>();const [reason,setReason]=useState('');const [selected,setSelected]=useState<string[]>([]);const router=useRouter();async function load(){setBusy(true);try{const d=await api('auth/me');setUser(d.user);if(d.user)setOrders((await api('orders')).orders);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}useEffect(()=>{load();},[]);async function action(path:string,body:any){setError('');setBusy(true);try{await api(path,body);setRefund(undefined);setReason('');setSelected([]);await load();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- return <div className="page-wrap"><div className="account-heading"><div><p className="eyebrow">YOUR RAJVYA CORNER</p><h1 className="page-title">Your pieces. Your moments.</h1></div>{user&&<div className="row"><button className="text-button" onClick={load}><RefreshCw size={14}/>Refresh</button><button className="text-button" onClick={async()=>{await api('auth/logout',{});setUser(null);setOrders([]);router.refresh();}}><LogOut size={14}/>Sign out</button></div>}</div>{error&&<p className="error">{error}</p>}{busy&&<p className="row muted small"><LoaderCircle size={16} className="spin"/>Checking your account…</p>}{!busy&&!user?<div className="empty-state"><Package size={35}/><h3>Keep your favourites close.</h3><p>Sign in to view orders, reservations and refund requests.</p><Link className="button primary" href="/login" style={{marginTop:20}}>Sign in or explore the demo <ArrowRight size={15}/></Link></div>:user&&<><div className="account-info notice"><span>Signed in as {user.name}</span>{user.role!=='customer'&&<Link className="text-button" href="/admin">Open owner panel <ArrowRight size={13}/></Link>}</div>{!orders.length?<div className="empty-state"><h3>A story waiting to begin.</h3><p>Your purchases and reservations will appear here.</p><Link className="button secondary" href="/#collection" style={{marginTop:20}}>Explore the collection</Link></div>:<div className="orders-list">{orders.map(o=><article className="panel order-card" key={o.id}><header><div><p className="eyebrow">{o.type==='reservation'?'RESERVE & VISIT':'YOUR ORDER'} · {new Date(o.created_at).toLocaleDateString('en-IN')}</p><h3>{o.reservation_code??'RJ-'+o.id.slice(0,8).toUpperCase()}</h3></div><div className="status-pills"><span>{o.payment_status.replaceAll('_',' ')}</span><span>{o.fulfillment_status}</span></div></header>{o.items.map((i:any)=><div className="order-line" key={i.id}><img src={i.snapshot.imageUrl} alt={i.snapshot.name}/><div><h4>{i.snapshot.name}</h4><p>{i.snapshot.purity} · {(i.snapshot.netMg/1000).toFixed(2)} g</p></div><strong>{money(i.total_paise)}</strong></div>)}<div className="order-details"><span>{o.type==='reservation'?'Test token paid / payable':'Order total'} <b>{money(o.total_paise)}</b></span>{o.visit_at&&<span><MapPin size={13}/>Simulated visit: {new Date(o.visit_at).toLocaleString('en-IN')}</span>}{o.reservation_expires_at&&<span>Reserved until {new Date(o.reservation_expires_at).toLocaleString('en-IN')}</span>}{o.type==='reservation'&&<span>Balance at simulated counter: {money(o.items.reduce((n:number,i:any)=>n+Number(i.total_paise),0)-Number(o.total_paise))}</span>}{o.tracking&&<span>Fulfilment note: {o.tracking}</span>}{o.exception_reason&&<p className="error">{o.exception_reason}</p>}</div><div className="row order-buttons">{['pending','exception'].includes(o.payment_status)&&<button disabled={busy} className="button secondary" onClick={()=>action('orders/reconcile',{orderId:o.id})}><RefreshCw size={13}/>Check payment status</button>}{['captured','partially_refunded','exception'].includes(o.payment_status)&&<button className="text-button" onClick={()=>{setRefund(o.id);setSelected([]);}}>Request a refund <ArrowRight size={13}/></button>}</div>{o.refunds?.map((r:any)=><p className="notice small" key={r.id}>Refund request: <b>{r.status}</b> · {money(r.amount_paise)} · {r.reason}</p>)}{refund===o.id&&<form className="refund-form" onSubmit={e=>{e.preventDefault();action('refunds',{orderId:o.id,itemIds:selected,reason});}}><h4>Tell us a little more.</h4><p className="small muted">Select specific pieces, or leave unchecked to request the remaining refundable amount. Every refund requires owner approval.</p>{o.type==='purchase'&&o.items.map((i:any)=><label className="check-field" key={i.id}><input type="checkbox" checked={selected.includes(i.id)} onChange={e=>setSelected(e.target.checked?[...selected,i.id]:selected.filter(x=>x!==i.id))}/>{i.snapshot.name}</label>)}<label className="field">Reason<textarea required minLength={5} maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)}/></label><div className="row"><button className="button primary" disabled={busy}>Send to owner for review</button><button type="button" className="text-button" onClick={()=>setRefund(undefined)}>Cancel</button></div></form>}</article>)}</div>}</>}</div>;
+import { useRouter } from 'next/navigation';
+import { ArrowRight, LoaderCircle, RefreshCw, LogOut, Package, MapPin } from 'lucide-react';
+import { api } from '@/lib/client';
+import { preciseMoney } from '@/lib/types';
+export function Account() {
+  const [user, setUser] = useState<any>();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState('');
+  const [refund, setRefund] = useState<string>();
+  const [reason, setReason] = useState('');
+  const [selected, setSelected] = useState<string[]>([]);
+  const router = useRouter();
+  async function load() {
+    setBusy(true);
+    try {
+      const d = await api('auth/me');
+      setUser(d.user);
+      if (d.user) setOrders((await api('orders')).orders);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  useEffect(() => {
+    load();
+  }, []);
+  async function action(path: string, body: any) {
+    setError('');
+    setBusy(true);
+    try {
+      await api(path, body);
+      setRefund(undefined);
+      setReason('');
+      setSelected([]);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="page-wrap">
+      <div className="account-heading">
+        <div>
+          <p className="eyebrow">YOUR RAJVYA CORNER</p>
+          <h1 className="page-title">Your pieces. Your moments.</h1>
+        </div>
+        {user && (
+          <div className="row">
+            <button className="text-button" onClick={load}>
+              <RefreshCw size={14} />
+              Refresh
+            </button>
+            <button
+              className="text-button"
+              onClick={async () => {
+                await api('auth/logout', {});
+                setUser(null);
+                setOrders([]);
+                router.refresh();
+              }}
+            >
+              <LogOut size={14} />
+              Sign out
+            </button>
+          </div>
+        )}
+      </div>
+      {error && <p className="error">{error}</p>}
+      {busy && (
+        <p className="row muted small">
+          <LoaderCircle size={16} className="spin" />
+          Checking your account…
+        </p>
+      )}
+      {!busy && !user ? (
+        <div className="empty-state">
+          <Package size={35} />
+          <h3>Keep your favourites close.</h3>
+          <p>Sign in to view orders, reservations and refund requests.</p>
+          <Link className="button primary" href="/login" style={{ marginTop: 20 }}>
+            Sign in or explore the demo <ArrowRight size={15} />
+          </Link>
+        </div>
+      ) : (
+        user && (
+          <>
+            <div className="account-info notice">
+              <span>Signed in as {user.name}</span>
+              {user.role !== 'customer' && (
+                <Link className="text-button" href="/admin">
+                  Open owner panel <ArrowRight size={13} />
+                </Link>
+              )}
+            </div>
+            {!orders.length ? (
+              <div className="empty-state">
+                <h3>A story waiting to begin.</h3>
+                <p>Your purchases and reservations will appear here.</p>
+                <Link className="button secondary" href="/#collection" style={{ marginTop: 20 }}>
+                  Explore the collection
+                </Link>
+              </div>
+            ) : (
+              <div className="orders-list">
+                {orders.map((o) => (
+                  <article className="panel order-card" key={o.id}>
+                    <header>
+                      <div>
+                        <p className="eyebrow">
+                          {o.type === 'reservation' ? 'RESERVE & VISIT' : 'YOUR ORDER'} ·{' '}
+                          {new Date(o.created_at).toLocaleDateString('en-IN')}
+                        </p>
+                        <h3>{o.reservation_code ?? 'RJ-' + o.id.slice(0, 8).toUpperCase()}</h3>
+                      </div>
+                      <div className="status-pills">
+                        <span>{o.payment_status.replaceAll('_', ' ')}</span>
+                        <span>{o.fulfillment_status}</span>
+                      </div>
+                    </header>
+                    {o.items.map((i: any) => (
+                      <div className="order-line" key={i.id}>
+                        <JewelleryImage src={i.snapshot.imageUrl} alt={i.snapshot.name} />
+                        <div>
+                          <h4>{i.snapshot.name}</h4>
+                          <p>
+                            {i.snapshot.purity} · {(i.snapshot.netMg / 1000).toFixed(2)} g
+                          </p>
+                        </div>
+                        <strong>{preciseMoney(i.total_paise)}</strong>
+                      </div>
+                    ))}
+                    <div className="order-details">
+                      <span>
+                        {o.type === 'reservation' ? 'Test token paid / payable' : 'Order total'}{' '}
+                        <b>{preciseMoney(o.total_paise)}</b>
+                      </span>
+                      {o.visit_at && (
+                        <span>
+                          <MapPin size={13} />
+                          Simulated visit: {new Date(o.visit_at).toLocaleString('en-IN')}
+                        </span>
+                      )}
+                      {o.reservation_expires_at && (
+                        <span>
+                          Reserved until{' '}
+                          {new Date(o.reservation_expires_at).toLocaleString('en-IN')}
+                        </span>
+                      )}
+                      {o.type === 'reservation' && (
+                        <span>
+                          Balance at simulated counter:{' '}
+                          {preciseMoney(
+                            o.items.reduce((n: number, i: any) => n + Number(i.total_paise), 0) -
+                              Number(o.total_paise),
+                          )}
+                        </span>
+                      )}
+                      {o.tracking && <span>Fulfilment note: {o.tracking}</span>}
+                      {o.exception_reason && <p className="error">{o.exception_reason}</p>}
+                    </div>
+                    <div className="row order-buttons">
+                      {['pending', 'exception'].includes(o.payment_status) && (
+                        <button
+                          disabled={busy}
+                          className="button secondary"
+                          onClick={() => action('orders/reconcile', { orderId: o.id })}
+                        >
+                          <RefreshCw size={13} />
+                          Check payment status
+                        </button>
+                      )}
+                      {['captured', 'partially_refunded', 'exception'].includes(
+                        o.payment_status,
+                      ) && (
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setRefund(o.id);
+                            setSelected([]);
+                          }}
+                        >
+                          Request a refund <ArrowRight size={13} />
+                        </button>
+                      )}
+                    </div>
+                    {o.refunds?.map((r: any) => (
+                      <p className="notice small" key={r.id}>
+                        Refund request: <b>{r.status}</b> · {preciseMoney(r.amount_paise)} ·{' '}
+                        {r.reason}
+                      </p>
+                    ))}
+                    {refund === o.id && (
+                      <form
+                        className="refund-form"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          action('refunds', { orderId: o.id, itemIds: selected, reason });
+                        }}
+                      >
+                        <h4>Tell us a little more.</h4>
+                        <p className="small muted">
+                          Select specific pieces, or leave unchecked to request the remaining
+                          refundable amount. Every refund requires owner approval.
+                        </p>
+                        {o.type === 'purchase' &&
+                          o.items.map((i: any) => (
+                            <label className="check-field" key={i.id}>
+                              <input
+                                type="checkbox"
+                                checked={selected.includes(i.id)}
+                                onChange={(e) =>
+                                  setSelected(
+                                    e.target.checked
+                                      ? [...selected, i.id]
+                                      : selected.filter((x) => x !== i.id),
+                                  )
+                                }
+                              />
+                              {i.snapshot.name}
+                            </label>
+                          ))}
+                        <label className="field">
+                          Reason
+                          <textarea
+                            required
+                            minLength={5}
+                            maxLength={1000}
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                          />
+                        </label>
+                        <div className="row">
+                          <button className="button primary" disabled={busy}>
+                            Send to owner for review
+                          </button>
+                          <button
+                            type="button"
+                            className="text-button"
+                            onClick={() => setRefund(undefined)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </>
+        )
+      )}
+    </div>
+  );
 }

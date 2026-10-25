@@ -1,13 +1,121 @@
+import { JewelleryImage } from '@/components/jewellery-image';
 import Link from 'next/link';
-import {ArrowRight,ArrowUpRight,Sparkles,ShieldCheck,Gem,MapPin} from 'lucide-react';
-import {catalogue,rates} from '@/lib/catalogue';
-import {Collection} from '@/components/collection';
-export const dynamic='force-dynamic';
-export default async function Home({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
- const params=await searchParams;const [pieces,today]=await Promise.all([catalogue({category:params.category,purity:params.purity,includeUnavailable:false}),rates()]);
- return <><section className="hero"><div className="hero-copy"><p className="eyebrow"><span/> NEW DELHI · A FAMILY JEWELLERY STORY</p><h1>For the everyday.<br/><em>And the unforgettable.</em></h1><p className="hero-description">A little gold. A quiet sparkle. Find a piece that feels like you, with a little help along the way.</p><div className="hero-actions"><Link className="button primary" href="#collection">Explore the collection <ArrowRight size={17}/></Link><button className="text-button" data-open-chat><Sparkles size={16}/> Find my piece</button></div><div className="hero-note"><span className="tiny-line"/> Thoughtfully chosen. Transparently priced.</div></div><div className="hero-photo"><img src="/images/hero.png" alt="Gold pendant and floral earrings on softly folded ivory linen"/><div className="image-note"><span>SMALL DETAILS. LASTING MEANING.</span><ArrowUpRight size={18}/></div></div></section>
- <section className="rate-strip"><div><span className="live-dot"/> TODAY’S DEMO METAL RATES</div><div>{today.length?today.map((r:any)=><span key={r.purity}>{r.purity==='925'?'Silver':r.purity+' Gold'} <strong>₹{(Number(r.rate_paise)/100).toLocaleString('en-IN')}/g</strong></span>):<span>Awaiting owner confirmation of today’s rates</span>}</div><Link href="/policies#pricing">How pricing works <ArrowUpRight size={13}/></Link></section>
- <Collection initial={pieces} initialCategory={params.category??''}/>
- <section className="visit-section" id="visit"><div className="visit-art"><img src="/images/earrings.png" alt="Floral gold stud earrings"/></div><div><p className="eyebrow">SOME THINGS ARE BETTER IN PERSON</p><h2>Meet your piece.<br/><em>Before making it yours.</em></h2><p>For pieces above ₹25,000, reserve with a ₹1,000 test token and take 48 hours to see how it feels. Your token goes towards the final bill.</p><Link className="button secondary" href="/#collection">Find a piece to reserve <ArrowRight size={16}/></Link><span className="demo-note"><MapPin size={14}/> Visits are simulated in this portfolio demo.</span></div></section>
- <section className="values-row"><div><Gem/><h3>A piece, not a product number</h3><p>Explore the weight, purity and making charges behind every piece.</p></div><div><ShieldCheck/><h3>Clarity at every step</h3><p>Review the complete price breakdown before test checkout.</p></div><div><Sparkles/><h3>A little thoughtful guidance</h3><p>Describe your occasion, your style or simply how you want it to feel.</p></div></section></>;
+import { ArrowRight, ArrowUpRight, Sparkles, ShieldCheck, Gem, MapPin } from 'lucide-react';
+import { catalogue, rates } from '@/lib/catalogue';
+import { Collection } from '@/components/collection';
+export const dynamic = 'force-dynamic';
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const params = await searchParams;
+  const [pieces, today] = await Promise.all([
+    catalogue({ category: params.category, purity: params.purity, includeUnavailable: false }),
+    rates(),
+  ]);
+  return (
+    <>
+      <section className="hero">
+        <div className="hero-copy">
+          <p className="eyebrow">
+            <span /> NEW DELHI · A FAMILY JEWELLERY STORY
+          </p>
+          <h1>
+            For the everyday.
+            <br />
+            <em>And the unforgettable.</em>
+          </h1>
+          <p className="hero-description">
+            A little gold. A quiet sparkle. Find a piece that feels like you, with a little help
+            along the way.
+          </p>
+          <div className="hero-actions">
+            <Link className="button primary" href="#collection">
+              Explore the collection <ArrowRight size={17} />
+            </Link>
+            <button className="text-button" data-open-chat>
+              <Sparkles size={16} /> Find my piece
+            </button>
+          </div>
+          <div className="hero-note">
+            <span className="tiny-line" /> Thoughtfully chosen. Transparently priced.
+          </div>
+        </div>
+        <div className="hero-photo">
+          <JewelleryImage
+            src="/images/hero.png"
+            preload
+            sizes="(max-width: 700px) 100vw, 50vw"
+            alt="Gold pendant and floral earrings on softly folded ivory linen"
+          />
+          <div className="image-note">
+            <span>SMALL DETAILS. LASTING MEANING.</span>
+            <ArrowUpRight size={18} />
+          </div>
+        </div>
+      </section>
+      <section className="rate-strip">
+        <div>
+          <span className="live-dot" /> TODAY’S DEMO METAL RATES
+        </div>
+        <div>
+          {today.length ? (
+            today.map((r: any) => (
+              <span key={r.purity}>
+                {r.purity === '925' ? 'Silver' : r.purity + ' Gold'}{' '}
+                <strong>₹{(Number(r.rate_paise) / 100).toLocaleString('en-IN')}/g</strong>
+              </span>
+            ))
+          ) : (
+            <span>Awaiting owner confirmation of today’s rates</span>
+          )}
+        </div>
+        <Link href="/policies#pricing">
+          How pricing works <ArrowUpRight size={13} />
+        </Link>
+      </section>
+      <Collection initial={pieces} initialCategory={params.category ?? ''} />
+      <section className="visit-section" id="visit">
+        <div className="visit-art">
+          <JewelleryImage src="/images/earrings.png" alt="Floral gold stud earrings" />
+        </div>
+        <div>
+          <p className="eyebrow">SOME THINGS ARE BETTER IN PERSON</p>
+          <h2>
+            Meet your piece.
+            <br />
+            <em>Before making it yours.</em>
+          </h2>
+          <p>
+            For pieces above ₹25,000, reserve with a ₹1,000 test token and take 48 hours to see how
+            it feels. Your token goes towards the final bill.
+          </p>
+          <Link className="button secondary" href="/#collection">
+            Find a piece to reserve <ArrowRight size={16} />
+          </Link>
+          <span className="demo-note">
+            <MapPin size={14} /> Visits are simulated in this portfolio demo.
+          </span>
+        </div>
+      </section>
+      <section className="values-row">
+        <div>
+          <Gem />
+          <h3>A piece, not a product number</h3>
+          <p>Explore the weight, purity and making charges behind every piece.</p>
+        </div>
+        <div>
+          <ShieldCheck />
+          <h3>Clarity at every step</h3>
+          <p>Review the complete price breakdown before test checkout.</p>
+        </div>
+        <div>
+          <Sparkles />
+          <h3>A little thoughtful guidance</h3>
+          <p>Describe your occasion, your style or simply how you want it to feel.</p>
+        </div>
+      </section>
+    </>
+  );
 }

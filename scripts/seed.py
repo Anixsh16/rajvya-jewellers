@@ -1,8 +1,15 @@
+from db_connection import connect_database
 """Idempotent demo fixtures. Never resets or overwrites sold inventory."""
-import pathlib,json,urllib.request,urllib.error,uuid,psycopg
+import pathlib,json,urllib.request,urllib.error,uuid,psycopg,os,urllib.parse
 from psycopg.types.json import Jsonb
 root=pathlib.Path(__file__).resolve().parents[1]
-cfg=json.loads((pathlib.Path.home()/'.config'/'rajvya'/'credentials.json').read_text())
+cfgpath=pathlib.Path(os.environ.get('RAJVYA_CREDENTIALS_FILE',pathlib.Path.home()/'.config'/'rajvya'/'credentials.json'))
+cfg=json.loads(cfgpath.read_text(encoding='utf-8')) if cfgpath.exists() else {}
+for key in ['NEXT_PUBLIC_SUPABASE_URL','SUPABASE_SECRET_KEY','DATABASE_URL','OWNER_EMAIL','OWNER_PASSWORD','STAFF_EMAIL','STAFF_PASSWORD','DEMO_CUSTOMER_EMAIL','DEMO_CUSTOMER_PASSWORD']:
+    if os.environ.get(key):cfg[key]=os.environ[key]
+required=['NEXT_PUBLIC_SUPABASE_URL','SUPABASE_SECRET_KEY','DATABASE_URL','OWNER_EMAIL','OWNER_PASSWORD','STAFF_EMAIL','STAFF_PASSWORD','DEMO_CUSTOMER_EMAIL','DEMO_CUSTOMER_PASSWORD']
+missing=[key for key in required if not cfg.get(key)]
+if missing:raise SystemExit('Missing provisioning fields: '+', '.join(missing))
 base=cfg['NEXT_PUBLIC_SUPABASE_URL'];headers={'apikey':cfg['SUPABASE_SECRET_KEY'],'Content-Type':'application/json'}
 def api(path,method='GET',body=None,extra=None):
     h={**headers,**(extra or {})};data=json.dumps(body).encode() if isinstance(body,(dict,list)) else body
@@ -12,7 +19,8 @@ def api(path,method='GET',body=None,extra=None):
         if e.code in (400,409) and '/bucket' in path:return {}
         raise RuntimeError('Supabase operation failed: '+str(e.code)) from None
 users=api('/auth/v1/admin/users?page=1&per_page=100').get('users',[])
-with psycopg.connect(cfg['DATABASE_URL'],sslmode='require',connect_timeout=15) as db:
+local_db=urllib.parse.urlparse(cfg['DATABASE_URL']).hostname in ('localhost','127.0.0.1','::1')
+with connect_database(cfg['DATABASE_URL'],connect_timeout=15) as db:
     accounts=[]
     for kind,role,name in [('OWNER','owner','Rajvya owner'),('STAFF','staff','Rajvya staff'),('DEMO_CUSTOMER','customer','Demo customer')]:
         email=cfg[kind+'_EMAIL'];u=next((u for u in users if u['email']==email),None)
@@ -38,9 +46,10 @@ with psycopg.connect(cfg['DATABASE_URL'],sslmode='require',connect_timeout=15) a
         tags=['daily wear','simple','lightweight','halka','roz','gift','office',cat.lower()]
         desc=f'A {"polished sterling silver" if kind=="ring" else "delicate gold"} {kind if kind!="earrings" else "pair of floral studs"} for everyday moments. Sample catalogue piece with an illustrative AI-generated photograph. Weight and purity are demo fixtures.'
         db.execute("insert into products(sku,name,description,description_hi,category,purity,net_mg,gross_mg,making_bps,making_fixed_paise,image_url,tags,status,review_confirmed) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'live',true) on conflict(sku) do nothing",(sku,name,desc,'रोज़ पहनने के लिए सरल आभूषण। यह नमूना उत्पाद है।',cat,purity,weight,weight+150,1200,180000 if kind=='ring' else None,urls[kind],tags))
-    policies=[('About this demo','This is an independent portfolio demonstration, not an official commercial shop. All products, rates, policies and visits are illustrative. Razorpay is in test mode; no real money is charged. Jewellery photographs are AI-generated.'),('Pricing and quotes','Demo prices use net metal weight, the owner-confirmed daily rate, making charges, stone charges and a sample 3% tax. Quotes remain valid for 15 minutes. A new price requires your confirmation. Prices are not investment advice.'),('Reservations','One piece priced above ₹25,000 can be reserved with a ₹1,000 test token. A confirmed token payment holds it for 48 hours and freezes the quoted demo price. Choose a visit within 48 hours. The token is credited against the in-store balance. Cancellation or expiry sends a token refund request to the owner.'),('Returns and refunds','For this demo you may request a refund for a purchase or selected order items. Every request requires owner approval. A request is not a promise of eligibility or completed payment. Provider-confirmed refunds update your order. Items are not automatically restocked.'),('Visits and fulfilment','Store visits and fulfilment are simulated. Choose a reservation time and present the reservation code in the owner panel. Online orders can be marked ready or completed by staff. There is no real carrier or store appointment behind this demo.'),('Privacy and support','Use a demo identity and do not submit personal or financial information in chat or product photos. Customers can access only their own orders and conversations. Ask for a human to flag a conversation for owner review.')]
+    policies=[('About this demo','This is an independent portfolio demonstration, not an official commercial shop. All products, rates, policies and visits are illustrative. Razorpay is in test mode; no real money is charged. Jewellery photographs are AI-generated.'),('Pricing and quotes','Demo metal value is net metal weight multiplied by the owner-confirmed daily rate for its purity. Each piece uses either its configured percentage of metal value or its fixed making charge; a fixed charge overrides the percentage. Stone charges are added, then an illustrative 3% tax on the subtotal. Product pages and quotes show the exact breakdown. Quotes are immutable and valid for 15 minutes. Fresh quotes require confirmation. These are fictional demo rules, not investment advice.'),('Reservations','One piece priced above ₹25,000 can be reserved with a ₹1,000 test token. A confirmed token payment holds it for 48 hours and freezes the quoted demo price. Choose a visit within 48 hours. The token is credited against the in-store balance. Cancellation or expiry sends a token refund request to the owner.'),('Returns and refunds','For this demo you may request a refund for a purchase or selected order items. Every request requires owner approval. A request is not a promise of eligibility or completed payment. Provider-confirmed refunds update your order. Items are not automatically restocked.'),('Visits and fulfilment','Store visits and fulfilment are simulated. Choose a reservation time and present the reservation code in the owner panel. Online orders can be marked ready or completed by staff. There is no real carrier or store appointment behind this demo.'),('Privacy and support','Use a demo identity and do not submit personal or financial information in chat or product photos. Customers can access only their own orders and conversations. Ask for a human to flag a conversation for owner review.')]
     for title,content in policies:db.execute('insert into policies(title,content) values(%s,%s) on conflict(title) do nothing',(title,content))
     db.commit()
 local=root/'.local';local.mkdir(exist_ok=True)
-(local/'demo-accounts.json').write_text(json.dumps(accounts,indent=2))
-print('Seeded demo accounts, current rates, 50 pieces, photographs, and policies. Account details saved privately in .local/demo-accounts.json.')
+account_file=pathlib.Path(os.environ.get('RAJVYA_ACCOUNTS_FILE',local/'demo-accounts.json'))
+account_file.write_text(json.dumps(accounts,indent=2),encoding='utf-8')
+print('Seeded demo accounts, current rates, 50 pieces, photographs, and policies. Account details saved in the private local account file.')

@@ -1,17 +1,244 @@
 'use client';
-import {useEffect,useState,useRef} from 'react';
+import { JewelleryImage } from '@/components/jewellery-image';
+
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import {useRouter,useSearchParams} from 'next/navigation';
-import {ArrowRight,LockKeyhole,ShoppingBag,LoaderCircle,Clock3,Trash2} from 'lucide-react';
-import {useShop} from './shell';
-import {api,pay} from '@/lib/client';
-import {money} from '@/lib/types';
-import type {Product} from '@/lib/types';
-export function Cart(){const {cart,remove,clear}=useShop();const router=useRouter();const params=useSearchParams();const [pieces,setPieces]=useState<Product[]>([]);const [quote,setQuote]=useState<any>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(true);const [tick,setTick]=useState(Date.now());const key=useRef<string>('');
- useEffect(()=>{const t=setInterval(()=>setTick(Date.now()),1000);return()=>clearInterval(t);},[]);
- useEffect(()=>{let alive=true;setLoading(true);(async()=>{try{let selected=cart;if(params.get('quote')){const q=await api('quotes/'+params.get('quote'));if(alive)setQuote(q);selected=q.items.map((i:any)=>i.product_id);}const found=await Promise.all(selected.map(id=>api('products/'+id).then(r=>r.product)));if(alive)setPieces(found);}catch(e){if(alive)setError((e as Error).message);}finally{if(alive)setLoading(false);}})();return()=>{alive=false;};},[cart,params]);
- const total=quote?Number(quote.total_paise):pieces.reduce((sum,p)=>sum+(p.price?.totalPaise??0),0);const seconds=quote?Math.max(0,Math.floor((new Date(quote.expires_at).getTime()-tick)/1000)):0;
- async function review(){setBusy(true);setError('');try{const q=await api('quotes',{productIds:pieces.map(p=>p.id)});setQuote(q);key.current='purchase-'+q.id;}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- async function checkout(){setBusy(true);setError('');try{const o=await api('checkout',{quoteId:quote.id,idempotencyKey:key.current||'purchase-'+quote.id,type:'purchase'});await pay(o);clear();router.push('/account');}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- return <div className="page-wrap"><div className="breadcrumb"><Link href="/">Home</Link><span>/</span>Your bag</div><p className="eyebrow">A LITTLE SOMETHING, CHOSEN BY YOU</p><h1 className="page-title">Your bag</h1><p className="muted small">{pieces.length} unique {pieces.length===1?'piece':'pieces'}</p>{error&&<p className="error">{error}{/sign in/i.test(error)&&<> <Link href="/login?next=/cart">Sign in to continue →</Link></>}</p>}{loading?<div className="empty-state"><LoaderCircle className="spin"/></div>:!pieces.length?<div className="empty-state"><ShoppingBag size={35}/><h3>Your next favourite is waiting.</h3><p>Explore the collection and add a piece that feels like you.</p><Link className="button primary" href="/#collection" style={{marginTop:22}}>Explore the collection <ArrowRight size={15}/></Link></div>:<div className="cart-layout"><div className="stack">{pieces.map(p=><article className="cart-item" key={p.id}><Link href={'/products/'+p.id}><img src={p.image_url} alt={p.name}/></Link><div><p className="eyebrow">{p.purity==='925'?'STERLING SILVER':p.purity+' GOLD'}</p><Link href={'/products/'+p.id}><h3>{p.name}</h3></Link><p className="small muted">{(p.net_mg/1000).toFixed(2)} g · One unique piece</p><strong>{money(quote?.items.find((i:any)=>i.product_id===p.id)?.total_paise??p.price?.totalPaise??0)}</strong><button className="remove-piece" onClick={()=>{remove(p.id);setQuote(undefined);if(params.has('quote'))router.replace('/cart');}}><Trash2 size={12}/>Remove</button>{p.availability!=='live'&&<span className="small error">Currently {p.availability}. Checkout will recheck availability.</span>}</div></article>)}<div className="notice row"><Clock3 size={20}/><p>Every piece is unique. Your entire bag is held together when checkout begins.</p></div><Link className="text-button" href="/#collection">Continue discovering <ArrowRight size={14}/></Link></div><aside className="cart-summary panel"><p className="eyebrow">THE DETAILS, ALL TOGETHER</p><h2>Order summary</h2><div className="summary-lines"><p><span>{pieces.length} unique pieces</span><strong>{money(total)}</strong></p><p><span>Demo store pickup</span><span>Included</span></p><p className="summary-total"><span>Total</span><strong>{money(total)}</strong></p></div>{quote&&<p className="quote-timer"><Clock3 size={14}/>{seconds?`Quote valid for ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`:'Quote expired. Review a fresh price.'}</p>}{quote?.items&&<details className="small quote-details"><summary>View quoted price breakdowns</summary>{quote.items.map((i:any)=><div key={i.id}><b>{i.snapshot.name}</b><p>Metal {money(i.snapshot.metalPaise)} · Making {money(i.snapshot.makingPaise)} · Stones {money(i.snapshot.stonePaise)} · Tax {money(i.snapshot.taxPaise)}</p></div>)}</details>}<button className="button primary" disabled={busy} onClick={quote&&seconds>0?checkout:review}>{busy?<LoaderCircle size={16} className="spin"/>:quote&&seconds>0?'Confirm & continue to test payment':'Review today’s exact price'}<ArrowRight size={15}/></button><p className="checkout-note"><LockKeyhole size={13}/> Razorpay test mode. No real money is charged.</p><p className="small muted" style={{marginTop:16}}>Review the complete price before confirming. If a piece becomes unavailable, none of your bag is held.</p></aside></div>}</div>;
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowRight, LockKeyhole, ShoppingBag, LoaderCircle, Clock3, Trash2 } from 'lucide-react';
+import { useShop } from './shell';
+import { api, pay } from '@/lib/client';
+import { money, preciseMoney } from '@/lib/types';
+import type { Product } from '@/lib/types';
+export function Cart() {
+  const { cart, remove, clear } = useShop();
+  const router = useRouter();
+  const params = useSearchParams();
+  const [pieces, setPieces] = useState<Product[]>([]);
+  const [quote, setQuote] = useState<any>();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
+  const key = useRef<string>('');
+  useEffect(() => {
+    setTick(Date.now());
+    const t = setInterval(() => setTick(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    (async () => {
+      try {
+        let selected = cart;
+        if (params.get('quote')) {
+          const q = await api('quotes/' + params.get('quote'));
+          if (alive) setQuote(q);
+          selected = q.items.map((i: any) => i.product_id);
+        }
+        const found = await Promise.all(
+          selected.map((id) => api('products/' + id).then((r) => r.product)),
+        );
+        if (alive) setPieces(found);
+      } catch (e) {
+        if (alive) setError((e as Error).message);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [cart, params]);
+  const total = quote
+    ? Number(quote.total_paise)
+    : pieces.reduce((sum, p) => sum + (p.price?.totalPaise ?? 0), 0);
+  const seconds = quote
+    ? Math.max(0, Math.floor((new Date(quote.expires_at).getTime() - tick) / 1000))
+    : 0;
+  async function review() {
+    setBusy(true);
+    setError('');
+    try {
+      const q = await api('quotes', { productIds: pieces.map((p) => p.id) });
+      setQuote(q);
+      key.current = 'purchase-' + q.id;
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function checkout() {
+    setBusy(true);
+    setError('');
+    try {
+      const o = await api('checkout', {
+        quoteId: quote.id,
+        idempotencyKey: key.current || 'purchase-' + quote.id,
+        type: 'purchase',
+      });
+      await pay(o);
+      if (params.has('quote')) pieces.forEach((p) => remove(p.id));
+      else clear();
+      router.push('/account');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="page-wrap">
+      <div className="breadcrumb">
+        <Link href="/">Home</Link>
+        <span>/</span>
+        {params.has('quote') ? 'Your quote' : 'Your bag'}
+      </div>
+      <p className="eyebrow">A LITTLE SOMETHING, CHOSEN BY YOU</p>
+      <h1 className="page-title">{params.has('quote') ? 'Your quote' : 'Your bag'}</h1>
+      <p className="muted small">
+        {pieces.length} unique {pieces.length === 1 ? 'piece' : 'pieces'}
+      </p>
+      {error && (
+        <p className="error">
+          {error}
+          {/sign in/i.test(error) && (
+            <>
+              {' '}
+              <Link href="/login?next=/cart">Sign in to continue →</Link>
+            </>
+          )}
+        </p>
+      )}
+      {loading ? (
+        <div className="empty-state">
+          <LoaderCircle className="spin" />
+        </div>
+      ) : !pieces.length ? (
+        <div className="empty-state">
+          <ShoppingBag size={35} />
+          <h3>Your next favourite is waiting.</h3>
+          <p>Explore the collection and add a piece that feels like you.</p>
+          <Link className="button primary" href="/#collection" style={{ marginTop: 22 }}>
+            Explore the collection <ArrowRight size={15} />
+          </Link>
+        </div>
+      ) : (
+        <div className="cart-layout">
+          <div className="stack">
+            {pieces.map((p) => (
+              <article className="cart-item" key={p.id}>
+                <Link href={'/products/' + p.id}>
+                  <JewelleryImage src={p.image_url} alt={p.name} />
+                </Link>
+                <div>
+                  <p className="eyebrow">
+                    {p.purity === '925' ? 'STERLING SILVER' : p.purity + ' GOLD'}
+                  </p>
+                  <Link href={'/products/' + p.id}>
+                    <h3>{p.name}</h3>
+                  </Link>
+                  <p className="small muted">{(p.net_mg / 1000).toFixed(2)} g · One unique piece</p>
+                  <strong>
+                    {(quote ? preciseMoney : money)(
+                      quote?.items.find((i: any) => i.product_id === p.id)?.total_paise ??
+                        p.price?.totalPaise ??
+                        0,
+                    )}
+                  </strong>
+                  <button
+                    className="remove-piece"
+                    onClick={() => {
+                      remove(p.id);
+                      setQuote(undefined);
+                      if (params.has('quote')) router.replace('/cart');
+                    }}
+                  >
+                    <Trash2 size={12} />
+                    Remove
+                  </button>
+                  {p.availability !== 'live' && (
+                    <span className="small error">
+                      Currently {p.availability}. Checkout will recheck availability.
+                    </span>
+                  )}
+                </div>
+              </article>
+            ))}
+            <div className="notice row">
+              <Clock3 size={20} />
+              <p>Every piece is unique. Your entire bag is held together when checkout begins.</p>
+            </div>
+            <Link className="text-button" href="/#collection">
+              Continue discovering <ArrowRight size={14} />
+            </Link>
+          </div>
+          <aside className="cart-summary panel">
+            <p className="eyebrow">THE DETAILS, ALL TOGETHER</p>
+            <h2>Order summary</h2>
+            <div className="summary-lines">
+              <p>
+                <span>{pieces.length} unique pieces</span>
+                <strong>{quote ? preciseMoney(total) : money(total)}</strong>
+              </p>
+              <p>
+                <span>Demo store pickup</span>
+                <span>Included</span>
+              </p>
+              <p className="summary-total">
+                <span>Total</span>
+                <strong>{quote ? preciseMoney(total) : money(total)}</strong>
+              </p>
+            </div>
+            {quote && (
+              <p className="quote-timer">
+                <Clock3 size={14} />
+                {seconds
+                  ? `Quote valid for ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+                  : 'Quote expired. Review a fresh price.'}
+              </p>
+            )}
+            {quote?.items && (
+              <details className="small quote-details">
+                <summary>View quoted price breakdowns</summary>
+                {quote.items.map((i: any) => (
+                  <div key={i.id}>
+                    <b>{i.snapshot.name}</b>
+                    <p>
+                      Metal {preciseMoney(i.snapshot.metalPaise)} · Making{' '}
+                      {preciseMoney(i.snapshot.makingPaise)} · Stones{' '}
+                      {preciseMoney(i.snapshot.stonePaise)} · Tax{' '}
+                      {preciseMoney(i.snapshot.taxPaise)}
+                    </p>
+                  </div>
+                ))}
+              </details>
+            )}
+            <button
+              className="button primary"
+              disabled={busy}
+              onClick={quote && seconds > 0 ? checkout : review}
+            >
+              {busy ? (
+                <LoaderCircle size={16} className="spin" />
+              ) : quote && seconds > 0 ? (
+                'Confirm & continue to test payment'
+              ) : (
+                'Review today’s exact price'
+              )}
+              <ArrowRight size={15} />
+            </button>
+            <p className="checkout-note">
+              <LockKeyhole size={13} /> Razorpay test mode. No real money is charged.
+            </p>
+            <p className="small muted" style={{ marginTop: 16 }}>
+              Review the complete price before confirming. If a piece becomes unavailable, none of
+              your bag is held.
+            </p>
+          </aside>
+        </div>
+      )}
+    </div>
+  );
 }

@@ -2,7 +2,7 @@
   {
     "id": "sales-01",
     "group": "sales",
-    "prompt": "Show simple gold earrings under 25000 rupees",
+    "prompt": "Show simple 18K gold earrings under 25000 rupees",
     "requiredTools": [
       "search_catalog"
     ],
