@@ -190,7 +190,11 @@ async function runAgent(
   const current = references.length
     ? await db()`select id,name,image_url,purity,net_mg,availability,price from catalogue where id=any(${db().array([...new Set(references)])}::uuid[])`
     : [];
-  const hard = customerConstraints(rows.filter((r) => r.role === 'user').map((r) => r.content));
+  // The model receives a bounded window; exact customer limits must outlive it.
+  // Parse only customer messages, so generated summaries cannot change a limit.
+  const preferences =
+    await db()`select content from messages where conversation_id=${s.conversationId} and role='user' order by created_at`;
+  const hard = customerConstraints(preferences.map((r) => r.content));
   const history: any[] = rows
     .filter((r) => r.role !== 'system')
     .map((r) => ({

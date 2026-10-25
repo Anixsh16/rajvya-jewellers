@@ -151,4 +151,31 @@ describe.skipIf(!local || !replay)('recorded Gemini transport with real services
       await sql`delete from policies where title=any(${sql.array(policyTitles)}::text[])`;
     await sql.end();
   });
+  it('an old budget outside the model window still blocks an over-budget reservation', async () => {
+    const [piece] =
+      await sql`select id from catalogue where category='Chains' and availability='live' order by sku limit 1`;
+    const [c] =
+      await sql`insert into conversations(customer_id,internal_only) values(${actor.id},true) returning id`;
+    conversations.push(c.id);
+    await sql`insert into messages(conversation_id,role,content,created_at) values(${c.id},'user','Only 22K pieces under 20000 rupees.',now()-interval '2 minutes'),(${c.id},'assistant','I will keep those preferences.',now()-interval '2 minutes')`;
+    for (let i = 0; i < 11; i++)
+      await sql`insert into messages(conversation_id,role,content,created_at) values(${c.id},'user','Please explain the return policy.',now()-interval '1 minute'+${i}*interval '1 second'),(${c.id},'assistant','These are illustrative demo policies.',now()-interval '1 minute'+${i}*interval '1 second')`;
+    const response = (parts: unknown[]) => ({
+      candidates: [{ content: { role: 'model', parts } }],
+    });
+    tape = [
+      response([{ text: 'sales' }]),
+      response([{ functionCall: { name: 'create_reservation', args: { productId: piece.id } } }]),
+      response([{ text: 'This piece is outside your confirmed budget.' }]),
+    ];
+    const result = await chatTurn(
+      actor,
+      { conversationId: c.id, message: 'Reserve this piece: ' + piece.id },
+      () => {},
+    );
+    expect(result.cards).toHaveLength(0);
+    expect(result.link).toBeUndefined();
+    expect(result.trace).toContainEqual({ tool: 'create_reservation', ok: false });
+    expect(payments.razor).not.toHaveBeenCalled();
+  });
 });
