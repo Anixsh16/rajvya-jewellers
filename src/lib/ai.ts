@@ -4,6 +4,15 @@ import { AppError } from './auth';
 import type { Actor, Product } from './types';
 import { keywordQuery, normalizeSearch } from './search-query';
 let client: GoogleGenAI;
+function requireLiveProvider() {
+  if (
+    ['local-offline-fixture', 'offline-replay-fixture'].includes(process.env.GEMINI_API_KEY ?? '')
+  )
+    throw new AppError(
+      'AI is disabled in this offline preview. Drafts can be reviewed manually and indexing retried with a configured provider.',
+      503,
+    );
+}
 async function reserveModelCall(model: string, embedding = false) {
   // Offline evaluators opt out explicitly in their own process. HTTP requests
   // cannot set this flag; deployed customer traffic always uses the hard cap.
@@ -42,6 +51,7 @@ export function gemini() {
       embedding = client.models.embedContent.bind(client.models);
     client.models.generateContent = async (params) => {
       return retryRateLimit(async () => {
+        requireLiveProvider();
         await reserveModelCall(params.model);
         return generate({
           ...params,
@@ -54,6 +64,7 @@ export function gemini() {
     };
     client.models.embedContent = async (params) => {
       return retryRateLimit(async () => {
+        requireLiveProvider();
         await reserveModelCall(params.model, true);
         return embedding({
           ...params,

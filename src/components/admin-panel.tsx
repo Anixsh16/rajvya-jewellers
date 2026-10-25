@@ -162,7 +162,7 @@ export function AdminPanel({ role }: { role: string }) {
         ...v,
         netMg: v.netMg ?? 0,
         grossMg: v.grossMg ?? 0,
-        purity: v.purity ?? '22K',
+        purity: v.purity ?? '',
         huid: v.huid ?? '',
         extraction: v,
         reviewConfirmed: false,
@@ -519,9 +519,11 @@ export function AdminPanel({ role }: { role: string }) {
                         <label className="field">
                           Purity
                           <select
+                            required
                             value={form.purity}
                             onChange={(e) => setForm({ ...form, purity: e.target.value })}
                           >
+                            <option value="">Select verified purity</option>
                             {['22K', '18K', '925'].map((c) => (
                               <option key={c}>{c}</option>
                             ))}
@@ -550,7 +552,13 @@ export function AdminPanel({ role }: { role: string }) {
                               type="number"
                               min="0"
                               step="0.001"
-                              value={form[key] ? form[key] / Number(div) : ''}
+                              value={
+                                form[key] === null ||
+                                form[key] === undefined ||
+                                (['netMg', 'grossMg'].includes(String(key)) && form[key] === 0)
+                                  ? ''
+                                  : form[key] / Number(div)
+                              }
                               onChange={(e) =>
                                 setForm({
                                   ...form,

@@ -20,6 +20,8 @@ The isolated application runs at `http://localhost:3001`. Local account details 
 
 See [complete setup and deployment instructions](docs/SETUP.md), [architecture and stack reasons](docs/ARCHITECTURE.md), [reviewer demo](docs/DEMO.md), [measured results and outstanding gates](docs/RESULTS.md), and the [approved illustrated build plan](docs/BUILD_PLAN.md).
 
+The [requirement audit](docs/RELEASE_AUDIT.md) identifies verified features and the remaining external and human release gates. The current application-source CI passed 89 automated tests and 18 browser journeys; a quota-interrupted live release subset is explicitly incomplete.
+
 Provisioning helpers use `~/.config/rajvya/credentials.json` on the development machine. `scripts/migrate.py` also accepts `DATABASE_URL` from the environment. `scripts/seed.py` provisions demo accounts, 50 products, generated photography, policies and today's demo rates. Its required provisioning fields are documented in `.env.example` and the script. The seed never resets sold inventory. Review every migration before using any existing non-demo database.
 
 ## Checks
@@ -65,7 +67,7 @@ CSV headers are demonstrated in `public/sample-catalogue.csv`. Imports stage dra
 
 Vercel runtime secrets are configured separately from GitHub and Supabase setup tokens. `scripts/provision-deploy.py` uploads tracked application source and starts a production deployment using credentials from the local private configuration. Vercel Hobby is for a personal non-commercial demo; commercial rollout requires a separate hosting review.
 
-Register the final HTTPS `/api/webhooks/razorpay` URL in the Razorpay test dashboard and use exactly the configured `RAZORPAY_WEBHOOK_SECRET`. Subscribe to `payment.captured`, `payment.failed` and `refund.processed`. This dashboard step still requires a human login. Scheduled provider reconciliation is independent of webhooks and uses short-lived signed invocations. `/api/health` checks database connectivity without revealing configuration. The real test refund currently remains uncertain following Razorpay's HTTP 400 response; it has not been reported as successful.
+Register the final HTTPS `/api/webhooks/razorpay` URL in the Razorpay test dashboard and use exactly the configured `RAZORPAY_WEBHOOK_SECRET`. Subscribe to `payment.captured`, `payment.failed` and `refund.processed`. This dashboard step still requires a human login. Scheduled provider reconciliation is independent of webhooks and uses short-lived signed invocations. `/api/health` checks database connectivity without revealing configuration. A real test purchase, closed-browser reservation recovery, and full owner-approved test refund have been verified; repeated approval did not duplicate the refund and physical stock stayed sold.
 
 Watch the owner exception queue, pending/uncertain refunds, failed embedding states, cron run history, server errors and AI usage. `ai_usage` tracks model tokens and latency; `audit_log` records owner decisions. Global daily AI and per-user request limits degrade to normal shopping when exhausted.
 

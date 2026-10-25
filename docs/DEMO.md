@@ -10,7 +10,7 @@ In `/admin`, privately sign in as the owner. Inspect rates/history, catalogue dr
 
 Open the assistant with a customer identity. Ask for a strict-budget recommendation, a matching piece, and a quote for the first result. Try Hinglish and a reference photo. Ask a policy question, inspect your own order, request a refund, and request a human. In review mode the owner must approve the draft before it appears. A customer cannot approve refunds, change rates, or read another customer's order/conversation.
 
-For refunds, demonstrate the owner decision and persisted approval workflow. A database test covers item limits, repeated events, uncertainty, and separate restock review. The external Razorpay refund remains an unresolved provider gate; do not present its pending/uncertain state as success.
+For refunds, demonstrate the owner decision and persisted approval workflow. A database test covers item limits, repeated events, uncertainty, and separate restock review. The actual test purchase has a provider-processed full refund; repeated approval created no duplicate. Its item deliberately remains sold until an owner records physical inspection. If demonstrating another refund, inspect current provider status and balance before a retry; never present an uncertain outcome as success.
 
 Run `python scripts/run-local.py mcp` for an actual MCP initialization/tool-list/search/summary/confirmation protocol check. Connect `npm run mcp --silent` from a trusted local MCP client for interactive owner use.
 

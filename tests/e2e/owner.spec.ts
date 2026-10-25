@@ -66,6 +66,12 @@ test.describe('private owner workflows', () => {
     expect(response.ok()).toBe(true);
     const { imageUrl } = await response.json();
     const storagePath = new URL(imageUrl).pathname.split('/catalogue/')[1];
+    let publishedId: string | undefined;
+    const service = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!,
+      { auth: { persistSession: false } },
+    );
     try {
       expect(imageUrl).toMatch(/\.webp$/);
       const image = await page.request.get(imageUrl);
@@ -75,14 +81,36 @@ test.describe('private owner workflows', () => {
       await expect(page.getByRole('heading', { name: 'Review the details' })).toBeVisible();
       await expect(page.getByText('Needs review: purity, netMg, grossMg, huid')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Approve & publish' })).toBeDisabled();
+      await expect(page.getByRole('combobox', { name: 'Purity', exact: true })).toHaveValue('');
+      await expect(page.getByLabel('Net weight (g)', { exact: true })).toHaveValue('');
+      await expect(page.getByLabel('Stone charge (₹)', { exact: true })).toHaveValue('0');
+      await page.getByRole('combobox', { name: 'Purity', exact: true }).selectOption('18K');
+      await page.getByLabel('Net weight (g)', { exact: true }).fill('2.1');
+      await page.getByLabel('Gross weight (g)', { exact: true }).fill('2.2');
+      await page.getByLabel('Weight, purity and charges checked against the product').check();
+      await page.getByLabel('HUID checked, or explicitly unavailable in this demo').check();
+      const saved = page.waitForResponse((r) => r.url().endsWith('/api/admin/products'));
+      await page.getByRole('button', { name: 'Approve & publish' }).click();
+      const publication = await saved;
+      const result = await publication.json();
+      publishedId = result.id;
+      expect(publication.ok()).toBe(true);
+      expect(result.status).toBe('live');
+      const { data, error } = await service
+        .from('products')
+        .select('embedding_status,stone_paise,purity')
+        .eq('id', publishedId)
+        .single();
+      expect(error).toBeNull();
+      expect(data?.embedding_status).toBe('failed');
+      expect(data?.stone_paise).toBe(0);
+      expect(data?.purity).toBe('18K');
     } finally {
-      const { error } = await createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SECRET_KEY!,
-        { auth: { persistSession: false } },
-      )
-        .storage.from('catalogue')
-        .remove([storagePath]);
+      if (publishedId) {
+        const { error } = await service.from('products').delete().eq('id', publishedId);
+        expect(error).toBeNull();
+      }
+      const { error } = await service.storage.from('catalogue').remove([storagePath]);
       expect(error).toBeNull();
     }
   });

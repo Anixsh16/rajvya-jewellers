@@ -44,9 +44,10 @@ Confirm all three daily rates in the owner panel before new quotes. Seeding conf
 
 ## Live AI evaluation
 
-`scripts/run-local.py` supports `eval`, `judge`, and `smoke`. `--live-ai` injects the existing developer's Gemini key into the subprocess without saving it in the disposable configuration. Other developers can supply their own key directly in the environment. Index the catalogue with `npx tsx scripts/index-catalogue.ts` using that environment before testing vector search.
+`scripts/run-local.py` supports `eval`, `judge`, `smoke`, and `index`. `--live-ai` injects a Gemini key from `GEMINI_API_KEY` in the environment, or the existing developer's private configuration, without saving it in the disposable configuration. Index the local catalogue before testing vector search.
 
 ```sh
+python scripts/run-local.py index --live-ai
 python scripts/run-local.py eval --live-ai --limit 30 --record
 python scripts/run-local.py eval --live-ai --limit 100 --record
 python scripts/run-local.py eval --live-ai --resume .local/latest-eval.json --record

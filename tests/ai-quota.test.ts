@@ -16,6 +16,16 @@ beforeEach(() => {
   state.limit = 2;
   state.provider.mockReset();
   vi.stubEnv('AI_EVALUATION', '0');
+  vi.stubEnv('GEMINI_API_KEY', 'quota-mock-key');
+});
+it('offline previews never contact the model provider', async () => {
+  vi.stubEnv('GEMINI_API_KEY', 'local-offline-fixture');
+  const { gemini } = await import('../src/lib/ai');
+  await expect(
+    gemini().models.embedContent({ model: 'fixture', contents: 'test' }),
+  ).rejects.toThrow(/offline preview/i);
+  expect(state.provider).not.toHaveBeenCalled();
+  expect(state.reservations).toBe(0);
 });
 afterEach(() => {
   vi.useRealTimers();
