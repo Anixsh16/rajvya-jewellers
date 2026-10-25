@@ -41,28 +41,28 @@ export function gemini() {
     const generate = client.models.generateContent.bind(client.models),
       embedding = client.models.embedContent.bind(client.models);
     client.models.generateContent = async (params) => {
-      await reserveModelCall(params.model);
-      return retryRateLimit(() =>
-        generate({
+      return retryRateLimit(async () => {
+        await reserveModelCall(params.model);
+        return generate({
           ...params,
           config: {
             ...params.config,
             httpOptions: { timeout: 25000, ...params.config?.httpOptions },
           },
-        }),
-      );
+        });
+      });
     };
     client.models.embedContent = async (params) => {
-      await reserveModelCall(params.model, true);
-      return retryRateLimit(() =>
-        embedding({
+      return retryRateLimit(async () => {
+        await reserveModelCall(params.model, true);
+        return embedding({
           ...params,
           config: {
             ...params.config,
             httpOptions: { timeout: 20000, ...params.config?.httpOptions },
           },
-        }),
-      );
+        });
+      });
     };
   }
   return client;

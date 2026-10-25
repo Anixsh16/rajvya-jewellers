@@ -6,8 +6,9 @@ import {
   requestRefund,
   paymentCaptured,
   refundProcessed,
+  decideRefund,
 } from '../src/lib/commerce';
-import { markSold, restock } from '../src/lib/admin';
+import { markSold, restock, fulfill } from '../src/lib/admin';
 import { price } from '../src/lib/pricing';
 import type { Actor } from '../src/lib/types';
 import postgres from 'postgres';
@@ -470,5 +471,54 @@ describe.skipIf(!enabled)('Postgres inventory and payment invariants', () => {
     expect(o.fulfillment_status).toBe('cancelled');
     const [prod] = await sql`select status from products where id=${ids[0]}`;
     expect(prod.status).toBe('live');
+  });
+  it('counter conversion preserves the frozen reservation price and consumes its hold once', async () => {
+    const q = await getQuote(a, [ids[0]]);
+    const [{ id }] =
+      await sql`select begin_checkout(${a.id}::uuid,${q.id}::uuid,${randomUUID()},'reservation',now()+interval '1 day') as id`;
+    const provider = 'order_test_' + randomUUID();
+    await sql`update orders set provider_order_id=${provider} where id=${id}`;
+    const e = 'test:' + randomUUID();
+    events.push(e);
+    await paymentCaptured(e, {
+      id: 'pay_test_' + randomUUID(),
+      order_id: provider,
+      status: 'captured',
+      amount: 100000,
+      currency: 'INR',
+    });
+    await sql`update products set making_bps=9000 where id=${ids[0]}`;
+    await expect(fulfill(a, id, 'completed', 'Counter fixture')).rejects.toThrow(/staff/i);
+    await fulfill({ ...b, role: 'staff' }, id, 'completed', 'Simulated counter balance collected');
+    const [o] =
+      await sql`select payment_status,fulfillment_status,total_paise from orders where id=${id}`;
+    const [item] = await sql`select total_paise from order_items where order_id=${id}`;
+    expect(o.fulfillment_status).toBe('completed');
+    expect(o.payment_status).toBe('captured');
+    expect(Number(item.total_paise)).toBe(Number(q.total_paise));
+    expect(Number(item.total_paise) - Number(o.total_paise)).toBe(Number(q.total_paise) - 100000);
+    expect(await sql`select 1 from holds where order_id=${id}`).toHaveLength(0);
+    const [piece] = await sql`select status from products where id=${ids[0]}`;
+    expect(piece.status).toBe('sold');
+    await expect(fulfill({ ...b, role: 'staff' }, id, 'completed', 'Repeat')).rejects.toThrow(
+      /closed/i,
+    );
+  });
+  it('refund rejection and repeated approval cannot replace an owner decision', async () => {
+    const { id, p } = await capturedOrder();
+    const e = 'test:' + randomUUID();
+    events.push(e);
+    await paymentCaptured(e, p);
+    const r = await requestRefund(a, id, [], 'Owner decision fixture');
+    await expect(decideRefund({ ...b, role: 'staff' }, r.id, true)).rejects.toThrow(/owner/i);
+    expect((await decideRefund({ ...b, role: 'owner' }, r.id, false)).status).toBe('rejected');
+    expect((await decideRefund({ ...b, role: 'owner' }, r.id, true)).status).toBe('rejected');
+    const next = await requestRefund(a, id, [], 'New request after rejected review');
+    expect(next.id).not.toBe(r.id);
+    expect((await decideRefund({ ...b, role: 'owner' }, next.id, true)).status).toBe('approved');
+    expect((await decideRefund({ ...b, role: 'owner' }, next.id, true)).status).toBe('approved');
+    expect(
+      await sql`select 1 from audit_log where entity_id=${next.id} and action='refund_approved'`,
+    ).toHaveLength(1);
   });
 });
