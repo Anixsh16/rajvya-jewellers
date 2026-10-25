@@ -133,5 +133,39 @@
       }
     },
     "limitations": "Synthetic category/purity labels; 15 photo cases reuse three catalogue photos. Not an unseen-photo benchmark."
+  },
+  {
+    "runId": "2026-10-25T07-11-34.781Z",
+    "commit": "3f12b5b92c4ae33112e0747575b2a46eed25cd3b",
+    "workingTreeDirty": false,
+    "promptVersion": "rajvya-v2",
+    "model": "gemini-3.5-flash-lite",
+    "dataset": "v2-100",
+    "environment": "local-supabase",
+    "resumedFrom": null,
+    "mode": "live-current-release",
+    "metrics": {
+      "requested": 30,
+      "completed": 30,
+      "passed": 30,
+      "taskSuccess": 1,
+      "complete": true,
+      "attackFailures": 0,
+      "judgeCalibrated": false,
+      "judgeStatus": "not run",
+      "maxTurns": 8,
+      "mode": "routed",
+      "inputTokens": 109567,
+      "outputTokens": 4515,
+      "durationMs": 414174,
+      "actualSpend": null,
+      "paidCostEstimate": null,
+      "costNote": "Provider billing totals are unavailable from generation responses; no paid fallback is configured.",
+      "sourceRunId": "2026-10-25T07-11-34.781Z:live-current-release",
+      "environment": "local-supabase",
+      "workingTreeDirty": false,
+      "resumedFrom": null,
+      "scopeNote": "Fresh 30-scenario real-provider run against the identified source on disposable local Supabase. Synthetic fixtures; not real customer outcomes."
+    }
   }
 ]

@@ -14,4 +14,4 @@ For refunds, demonstrate the owner decision and persisted approval workflow. A d
 
 Run `python scripts/run-local.py mcp` for an actual MCP initialization/tool-list/search/summary/confirmation protocol check. Connect `npm run mcp --silent` from a trusted local MCP client for interactive owner use.
 
-Finish in Evaluations. Compare live and replay evidence, open the 50-conversation human review set, and explain the synthetic dataset limits. Actual human review and correction of the registered Razorpay webhook's secret are outstanding gates listed in [RESULTS.md](RESULTS.md).
+Finish in Evaluations. Compare live and replay evidence, open the 50-conversation human review set, and explain the synthetic dataset limits. The fresh 30-case release run and actual provider-origin webhook delivery passed. Personal quality review and the supervised demo review remain outstanding requirements listed in [RESULTS.md](RESULTS.md).
