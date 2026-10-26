@@ -27,9 +27,10 @@ Hit@5 asks whether any labelled relevant product appears in the first five. Reca
 
 The 100-case suite was measured on a dirty working tree based on commit `7b68b342ef21adfb20f45307b0b18bfaf4642525`, before subsequent hardening. It is not evidence that all 100 cases ran against the final production commit. Final local checks, replay CI, the release subset, and deployment smoke must be recorded separately. Token counts in older runs omit some provider thinking tokens, so paid-equivalent costs would be incomplete; actual billing totals are unavailable. No paid fallback was configured and no monetary savings or business conversions are claimed.
 
-## Outstanding gates
+## Optional human calibration
 
-1. Personally review the 50-conversation judge set. `/admin` → Evaluations provides the source conversations/reference evidence and computes agreement only after all 50 are saved. Automated labels must not be substituted for this human work.
-2. Conduct the supervised demo review before enabling unrestricted assistant replies. The public assistant remains in owner review mode while these human requirements are open.
+On 26 October 2026 the owner declined mandatory personal calibration and the supervised demo-review period. Neither is a release blocker. The 50-conversation review set remains available for optional future calibration; agreement is not claimed, and the existing one genuine human label is retained. No automated labels are substituted for personal reviews.
+
+Direct assistant replies are enabled through the audited owner setting. Automated deployed checks verify direct, policy-grounded, published answers to the making-charge and real-checkout questions. This supplements the measured suites above; it does not establish human agreement or general model accuracy. Owner approval for refunds and catalogue publication review remain required.
 
 The application is restricted to a personal, illustrative portfolio: sample stock and policies, simulated visits/fulfilment, and test payments. Real tax/legal policy, commercial hosting eligibility, licensed shop data, delivery, and operational ownership require a separate launch decision.

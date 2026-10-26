@@ -1,6 +1,6 @@
 # Requirement audit — updated 26 October 2026
 
-Completion is **not yet proven**. The application is deployed, software/provider checks pass, and the fresh live release evaluation is complete. The plan's 50 genuine personal quality reviews and supervised demo review remain outstanding. This audit preserves the original scope in [the approved plan](BUILD_PLAN.md).
+The application is deployed and software/provider checks pass. On 26 October 2026, the owner declined the manual quality-review work, superseding the plan's mandatory 50 personal reviews and supervised demo period. These activities are optional; no automated judgment is represented as a human review. The [plan amendment](BUILD_PLAN.md) records this scope decision. Judge calibration remains unmeasured and advisory.
 
 Verified source: `3f12b5b92c4ae33112e0747575b2a46eed25cd3b`. [CI evidence](https://github.com/Anixsh16/rajvya-jewellers/actions/runs/40169757292) covers 91 unit/database/replay tests, 18 browser journeys, TypeScript, lint, formatting, evaluation manifest, and production build. Deployment `dpl_LZC4txYcHvrJgFAnsnNwARfTVMCe` reached READY. The fresh 30-case live run used this clean source, and the deployed extraction route and actual provider-origin webhook delivery passed.
 
@@ -45,15 +45,14 @@ Owner-access follow-up: source `ef5219453ca430a741fe89eae848df0e2866151d` adds a
 | 10: 100 scenarios (40/25/15/20), live full run | Versioned manifest; 100/100 complete on identified earlier dirty working tree, real provider recordings | Verified historical run; not an exact-final-commit 100-case claim |
 | 10: Deterministic and recorded PR/CI regression | 30 real provider tapes plus three labelled scripted constraint cases, 91 total tests in application-source CI | Verified |
 | 10: Fresh 30-case live release subset | Run `2026-10-25T07-11-34.781Z`: 30/30 passed on clean source, no resumed cases, seven attack cases without a recorded violation. Earlier incomplete report retained separately | Verified and published to the owner dashboard with source/prompt/model/dataset provenance |
-| 10: Separate judge calibrated with 50 real human reviews | Fifty advisory model judgments and owner review UI with evidence; personal labels are being saved successfully. Agreement remains unavailable until all 50 are reviewed | **In progress; genuine human work remains** |
+| 10: Separate judge and optional human calibration | Fifty advisory model judgments and working owner review UI; one genuine personal label remains saved. The owner waived mandatory manual calibration on 26 October; agreement remains unavailable | Automated pass verified; optional human calibration not completed or claimed |
 | 10: Restart/error/reset/image/secret/RLS hardening | Durable approval recovery, provider uncertainty recovery, fresh runner setup, upload restriction test, secret scans, customer RLS and anonymous mutation denial | Verified within tested cases; no destructive cloud reset performed |
 | 10: README/architecture/setup/demo/measurements/limits | Versioned documents, unchanged illustrated approved plan and mockups, aggregate provenance JSON | Verified |
-| 10: Supervised review before unrestricted replies | Hosted `assistant_shadow=true`; drafts require owner publication | Mode verified; **supervised human period not complete** |
+| 10: Optional supervised review / direct replies | Owner waived the mandatory supervised period on 26 October. Existing owner-only mode control enables direct replies; refund approval and other business permissions remain enforced | Manual gate waived; direct reply verification recorded below |
 | Latest UI request: remove the entire top demo banner | Source/CSS absence; local and deployed screenshots show header at top | Verified |
 
-## Remaining concrete actions
+## Release amendment and verification
 
-1. The owner personally labels the 50 evidence-backed conversations in `/admin` → Evaluations. Only actual personal judgments count toward judge agreement; the agent cannot create human labels or represent its own review as the owner's.
-2. The owner performs the supervised demo review. Measure the saved judge agreement and consider unrestricted assistant replies only after these human requirements are complete.
+The owner explicitly declined manual reviews on 26 October 2026. The existing authenticated owner API changed `assistant_shadow` to `false` and records `assistant_mode_changed` in the audit log. The deployed assistant's making-charge and real-checkout questions are checked for a direct result, successful policy retrieval and a published customer-visible message. Private evidence is stored in `.local/direct-replies-release-evidence.json`; this is automated verification, not a human review or judge calibration.
 
-The public demo remains available for browsing, manual filtering, test checkout and reservations while these requirements are open. Provider webhook delivery, scheduled reconciliation, and the identified live AI checks are verified. The assistant remains in owner review mode.
+The optional 50-sample calibration remains available under Evaluations. The existing one personal label is retained; no additional human labels are created. The owner can re-enable review mode from the dashboard. No manual review work remains a release requirement. Commercial operation remains outside this illustrative portfolio scope.

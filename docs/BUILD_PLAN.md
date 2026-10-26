@@ -1,5 +1,7 @@
 # Rajvya: end-to-end build roadmap
 
+> Release amendment — 26 October 2026: the owner declined the manual 50-conversation calibration and supervised demo-review requirements. These are now optional follow-up activities, not release blockers. Automated validation remains required; quality-judge scores remain uncalibrated and advisory. Direct assistant replies may be enabled without claiming human approval. Refund approvals, catalogue publication review, access controls and test-payment restrictions remain required. The original roadmap below is preserved for traceability.
+
 ## 1. Goal and architecture
 
 Build a deployed jewellery-store portfolio project covering the guide’s complete feature set: catalogue, daily pricing, multi-item checkout, reservations, AI-assisted uploads, conversational shopping, support, refund approvals, evaluations, and owner tools.
