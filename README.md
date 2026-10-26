@@ -20,7 +20,7 @@ The isolated application runs at `http://localhost:3001`. Local account details 
 
 See [complete setup and deployment instructions](docs/SETUP.md), [architecture and stack reasons](docs/ARCHITECTURE.md), [reviewer demo](docs/DEMO.md), [measured results and outstanding gates](docs/RESULTS.md), and the [approved illustrated build plan](docs/BUILD_PLAN.md).
 
-The [requirement audit](docs/RELEASE_AUDIT.md) identifies verified features and the remaining human release requirements. CI passed 91 automated tests and 18 browser journeys. A fresh 30-scenario live evaluation passed on identified clean source; the earlier quota-interrupted report remains separate. The owner still needs to complete 50 personal quality reviews and the supervised demo review.
+The [requirement audit](docs/RELEASE_AUDIT.md) identifies verified features and the remaining human release requirements. CI passed 91 automated tests and 19 browser journeys, including switching from a customer account to the assigned owner account. A fresh 30-scenario live evaluation passed on identified source; the earlier quota-interrupted report remains separate. Personal quality reviews are in progress; all 50 reviews and the supervised demo review are required before unrestricted assistant replies.
 
 Provisioning helpers use `~/.config/rajvya/credentials.json` on the development machine. `scripts/migrate.py` also accepts `DATABASE_URL` from the environment. `scripts/seed.py` provisions demo accounts, 50 products, generated photography, policies and today's demo rates. Its required provisioning fields are documented in `.env.example` and the script. The seed never resets sold inventory. Review every migration before using any existing non-demo database.
 

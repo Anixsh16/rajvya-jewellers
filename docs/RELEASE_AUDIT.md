@@ -1,10 +1,12 @@
-# Requirement audit — 25 October 2026
+# Requirement audit — updated 26 October 2026
 
 Completion is **not yet proven**. The application is deployed, software/provider checks pass, and the fresh live release evaluation is complete. The plan's 50 genuine personal quality reviews and supervised demo review remain outstanding. This audit preserves the original scope in [the approved plan](BUILD_PLAN.md).
 
 Verified source: `3f12b5b92c4ae33112e0747575b2a46eed25cd3b`. [CI evidence](https://github.com/Anixsh16/rajvya-jewellers/actions/runs/40169757292) covers 91 unit/database/replay tests, 18 browser journeys, TypeScript, lint, formatting, evaluation manifest, and production build. Deployment `dpl_LZC4txYcHvrJgFAnsnNwARfTVMCe` reached READY. The fresh 30-case live run used this clean source, and the deployed extraction route and actual provider-origin webhook delivery passed.
 
 The linked CI includes corrections that keep unknown extracted purity blank and zero stone charges valid; the expanded owner browser journey corrected and published a zero-stone product and verified retryable indexing failure offline. A separate offline-provider test confirms no model transport call. Original customer budget/purity constraints now persist beyond the model's 20-message window, with a labelled scripted regression for a limit established before that window.
+
+Owner-access follow-up: source `ef5219453ca430a741fe89eae848df0e2866151d` adds an account-switch link, an owner/staff sign-in screen, a customer-role explanation and fresh server navigation after login. [Its CI](https://github.com/Anixsh16/rajvya-jewellers/actions/runs/40276367801) passed verification and all 19 browser journeys, then deployed successfully. The deployed browser sign-in opened the owner workspace with the assigned credentials. Customer API access remained 403 in the regression journey. This follow-up changes the sign-in UI, not the assistant services measured in the cited live run. Personal review saving is now observed working; the dashboard remains the source for current review progress.
 
 | Plan requirement | Evidence inspected | Status |
 |---|---|---|
@@ -43,7 +45,7 @@ The linked CI includes corrections that keep unknown extracted purity blank and 
 | 10: 100 scenarios (40/25/15/20), live full run | Versioned manifest; 100/100 complete on identified earlier dirty working tree, real provider recordings | Verified historical run; not an exact-final-commit 100-case claim |
 | 10: Deterministic and recorded PR/CI regression | 30 real provider tapes plus three labelled scripted constraint cases, 91 total tests in application-source CI | Verified |
 | 10: Fresh 30-case live release subset | Run `2026-10-25T07-11-34.781Z`: 30/30 passed on clean source, no resumed cases, seven attack cases without a recorded violation. Earlier incomplete report retained separately | Verified and published to the owner dashboard with source/prompt/model/dataset provenance |
-| 10: Separate judge calibrated with 50 real human reviews | Fifty advisory model judgments and owner review UI with evidence; database confirms zero human labels | **Outstanding genuine human work** |
+| 10: Separate judge calibrated with 50 real human reviews | Fifty advisory model judgments and owner review UI with evidence; personal labels are being saved successfully. Agreement remains unavailable until all 50 are reviewed | **In progress; genuine human work remains** |
 | 10: Restart/error/reset/image/secret/RLS hardening | Durable approval recovery, provider uncertainty recovery, fresh runner setup, upload restriction test, secret scans, customer RLS and anonymous mutation denial | Verified within tested cases; no destructive cloud reset performed |
 | 10: README/architecture/setup/demo/measurements/limits | Versioned documents, unchanged illustrated approved plan and mockups, aggregate provenance JSON | Verified |
 | 10: Supervised review before unrestricted replies | Hosted `assistant_shadow=true`; drafts require owner publication | Mode verified; **supervised human period not complete** |
