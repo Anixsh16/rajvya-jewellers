@@ -2,6 +2,43 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 const path = process.env.RAJVYA_ACCOUNTS_FILE ?? '.local/demo-accounts.json';
+test('customer can switch to the assigned owner account from the access screen', async ({
+  page,
+}) => {
+  test.skip(!fs.existsSync(path), 'Assigned account fixtures required.');
+  const accounts: { role: string; email: string; password: string }[] = JSON.parse(
+    fs.readFileSync(path, 'utf8'),
+  );
+  const customer = accounts.find((a) => a.role === 'customer')!;
+  const owner = accounts.find((a) => a.role === 'owner')!;
+  await page.goto('/login');
+  await page.getByLabel('Email address').fill(customer.email);
+  await page.getByLabel('Password', { exact: true }).fill(customer.password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await page.goto('/admin');
+  await expect(page.getByRole('heading', { name: 'Owner access required.' })).toBeVisible();
+  expect((await page.request.get('/api/admin')).status()).toBe(403);
+  await page.getByRole('link', { name: 'Sign in with owner account', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Owner & staff sign in' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Continue with a fresh demo identity' }),
+  ).toHaveCount(0);
+  await page.getByLabel('Email address').fill(customer.email);
+  await page.getByLabel('Password', { exact: true }).fill(customer.password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.locator('form').getByRole('alert')).toContainText(
+    'This is a customer account.',
+  );
+  expect((await page.request.get('/api/admin')).status()).toBe(403);
+  await page.getByLabel('Email address').fill(owner.email);
+  await page.getByLabel('Password', { exact: true }).fill(owner.password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  expect((await page.request.get('/api/admin')).status()).toBe(200);
+});
+
 test.describe('private owner workflows', () => {
   test.skip(!fs.existsSync(path), 'Local owner fixtures required; never commit these credentials.');
   test.beforeEach(async ({ page }) => {

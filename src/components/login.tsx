@@ -2,7 +2,7 @@
 import { JewelleryImage } from '@/components/jewellery-image';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { ArrowRight, LoaderCircle, Sparkles } from 'lucide-react';
 import { api } from '@/lib/client';
 import { safeReturnPath } from '@/lib/navigation';
@@ -11,15 +11,23 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
   const params = useSearchParams();
+  const returnPath = safeReturnPath(params.get('next'));
+  const ownerLogin = /^\/admin(?:[/?#]|$)/.test(returnPath);
   async function login(demo = false) {
     setBusy(true);
     setError('');
     try {
       await api(demo ? 'auth/demo' : 'auth/login', demo ? {} : { email, password });
-      router.push(safeReturnPath(params.get('next')));
-      router.refresh();
+      if (ownerLogin) {
+        const { user } = await api<{ user: { role: string } | null }>('auth/me');
+        if (user?.role !== 'owner' && user?.role !== 'staff')
+          throw new Error(
+            'This is a customer account. Sign in with your assigned owner or staff credentials.',
+          );
+      }
+      // Start a fresh server navigation so a prior account's cached page is not reused.
+      window.location.assign(returnPath);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -37,10 +45,14 @@ export function Login() {
         </p>
       </div>
       <div className="login-form">
-        <p className="eyebrow">WELCOME TO RAJVYA</p>
-        <h1 className="page-title">A little more personal.</h1>
+        <p className="eyebrow">{ownerLogin ? 'OWNER WORKSPACE' : 'WELCOME TO RAJVYA'}</p>
+        <h1 className="page-title">
+          {ownerLogin ? 'Owner & staff sign in' : 'A little more personal.'}
+        </h1>
         <p className="muted small">
-          Sign in to keep track of your pieces, orders and conversations.
+          {ownerLogin
+            ? 'Use your assigned owner or staff email and password to open the workspace.'
+            : 'Sign in to keep track of your pieces, orders and conversations.'}
         </p>
         <form
           onSubmit={(e) => {
@@ -68,20 +80,29 @@ export function Login() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
-          {error && <p className="error">{error}</p>}
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
           <button className="button primary" disabled={busy}>
             {busy ? <LoaderCircle className="spin" size={16} /> : 'Sign in'}
             <ArrowRight size={15} />
           </button>
         </form>
-        <div className="login-divider">JUST EXPLORING?</div>
-        <button className="button secondary" disabled={busy} onClick={() => login(true)}>
-          <Sparkles size={15} />
-          Continue with a fresh demo identity
-        </button>
+        {!ownerLogin && (
+          <>
+            <div className="login-divider">JUST EXPLORING?</div>
+            <button className="button secondary" disabled={busy} onClick={() => login(true)}>
+              <Sparkles size={15} />
+              Continue with a fresh demo identity
+            </button>
+          </>
+        )}
         <p className="small muted" style={{ marginTop: 18 }}>
-          Each demo identity has its own orders and conversations. Use sample information only.
-          Owner access is private.
+          {ownerLogin
+            ? 'Owner and staff accounts are assigned separately from customer demo identities.'
+            : 'Each demo identity has its own orders and conversations. Use sample information only. Owner access is private.'}
         </p>
       </div>
     </div>
